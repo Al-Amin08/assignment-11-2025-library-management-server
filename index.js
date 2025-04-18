@@ -39,17 +39,25 @@ async function run() {
 
         app.get('/categoryWiseBooks/:category', async (req, res) => {
             const category = req.params.category
-            const query = { category: category }
+            const query = { category }
             const result = await categoryWiseBooksCollection.find(query).toArray()
             res.send(result)
         })
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+
+        app.get('/books/:id', async (req, res) => {
+            const id = req.params.id
+            // console.log(typeof (parseInt(id)))
+            const query = { bookId: parseInt(id) }
+            const result = await categoryWiseBooksCollection.findOne(query)
+            res.send(result)
+        })
+        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
         // await client.close();
     }
 }
-run().catch(console.dir);
+run()
 
 
 
