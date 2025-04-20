@@ -53,13 +53,21 @@ async function run() {
             res.send(result)
         })
 
+        app.get('/borrowed-books/:email', async (req, res) => {
+            const email = req.params.email
+            const query = { email }
+            const result = await borrowedBookCollection.find(query).toArray()
+            res.send(result)
+
+        })
+
         app.post('/borrow', async (req, res) => {
             const { bookId, userName, email, returnDate } = req.body
             const query = { bookId }
             const book = await categoryWiseBooksCollection.findOne(query)
             // res.send(book)
 
-            if (book.quantity === 0) {
+            if (!book || book.quantity === 0) {
                 return res.status(400).json({ message: "Book not available" })
             }
             await categoryWiseBooksCollection.updateOne({ bookId: bookId }, { $inc: { quantity: -1 } })
@@ -68,12 +76,16 @@ async function run() {
             const borrowedBook = {
                 bookId: book.bookId,
                 bookName: book.bookName,
+                category: book.category,
+                image: book.image,
                 author: book.author, userName, email, returnDate, borrowedAt: new Date()
             }
             await borrowedBookCollection.insertOne(borrowedBook)
             res.send({ success: true })
 
         })
+
+
         // console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
