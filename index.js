@@ -98,6 +98,13 @@ async function run() {
             res.send({ success: true })
         })
 
+        app.post('/addBooks', async (req, res) => {
+            const newBook = req.body
+            console.log(newBook)
+            const result = await categoryWiseBooksCollection.insertOne(newBook)
+            res.send(result)
+        })
+
         // console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
