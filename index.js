@@ -53,6 +53,12 @@ async function run() {
             res.send(result)
         })
 
+
+        app.get('/books', async (req, res) => {
+            const books = await categoryWiseBooksCollection.find().toArray()
+            res.send(books)
+        })
+
         app.get('/borrowed-books/:email', async (req, res) => {
             const email = req.params.email
             const query = { email }
