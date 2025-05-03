@@ -8,7 +8,7 @@ const app = express()
 const port = process.env.PORT || 5000;
 
 app.use(cors({
-    origin: ['http://localhost:5173'],
+    origin: ['http://localhost:5173', 'https://readvault.netlify.app'],
     credentials: true
 }))
 app.use(express.json())
@@ -63,7 +63,8 @@ async function run() {
 
             res.cookie('token', token, {
                 httpOnly: true,
-                secure: false
+                secure: process.env.NODE_ENV === "production",
+                sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
             })
                 .send({ success: true })
         })
@@ -72,9 +73,9 @@ async function run() {
             res
                 .clearCookie('token', {
                     httpOnly: true,
-                    secure: false
+                    secure: process.env.NODE_ENV === "production",
                     // secure: process.env.NODE_ENV === 'production',
-                    // sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict'
+                    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict'
                 })
                 .send({ success: true })
         })
@@ -95,8 +96,9 @@ async function run() {
 
         app.get('/books/:id', verifyToken, async (req, res) => {
             const id = req.params.id
+            console.log(id)
 
-            const query = { bookId: parseInt(id) }
+            const query = { _id: new ObjectId(id) }
             const result = await categoryWiseBooksCollection.findOne(query)
             res.send(result)
         })
@@ -120,18 +122,19 @@ async function run() {
 
         app.post('/borrow', async (req, res) => {
             const { bookId, userName, email, returnDate } = req.body
-            const query = { bookId }
+            console.log(bookId)
+            const query = { _id: new ObjectId(bookId) }
             const book = await categoryWiseBooksCollection.findOne(query)
             // res.send(book)
 
             if (!book || book.quantity === 0) {
                 return res.status(400).json({ message: "Book not available" })
             }
-            await categoryWiseBooksCollection.updateOne({ bookId: bookId }, { $inc: { quantity: -1 } })
+            await categoryWiseBooksCollection.updateOne({ _id: new ObjectId(bookId) }, { $inc: { quantity: -1 } })
 
             // add to the borrowed book collection
             const borrowedBook = {
-                bookId: book.bookId,
+                bookId: book._id,
                 bookName: book.bookName,
                 category: book.category,
                 image: book.image,
@@ -144,14 +147,14 @@ async function run() {
 
         app.post('/return-books/:id', async (req, res) => {
             const id = req.params.id
-
             const { bookId } = req.body
+            console.log(id)
 
             const query = { _id: new ObjectId(id) }
             const result = await borrowedBookCollection.deleteOne(query)
             res.send({ success: true, result })
 
-            await categoryWiseBooksCollection.updateOne({ bookId: bookId }, { $inc: { quantity: 1 } })
+            await categoryWiseBooksCollection.updateOne({ _id: new ObjectId(bookId) }, { $inc: { quantity: 1 } })
 
             res.send({ success: true })
         })
@@ -164,18 +167,18 @@ async function run() {
         })
 
 
-        app.put('/books/:id', async (req, res) => {
-            const id = parseInt(req.params.id)
-            const query = { bookId: id }
-            const options = { upsert: true }
+        app.patch('/books/:id', async (req, res) => {
+            const id = (req.params.id);
+            const query = { _id: new ObjectId(id) };
+
             const updatedDoc = {
-                $set: req.body
-            }
+                $set: req.body // Partially updates fields instead of replacing everything
+            };
 
-            const result = await categoryWiseBooksCollection.updateOne(query, updatedDoc, options)
-            res.send(result)
+            const result = await categoryWiseBooksCollection.updateOne(query, updatedDoc);
+            res.send(result);
+        });
 
-        })
 
         // console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
